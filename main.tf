@@ -53,7 +53,6 @@ resource "aws_security_group" "web_sg" {
 
 
 resource "aws_instance" "my_web_server" {
-  count         = 1 # We are telling Terraform to build exactly 2 instances
   ami           = "ami-008622f29a0929d42" # Standard Ubuntu AMI
   instance_type = "t3.micro"
 
