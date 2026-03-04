@@ -56,7 +56,15 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
-
+# Create an S3 bucket for secure file storage
+resource "aws_s3_bucket" "secure_storage_bucket" {
+  bucket = "scs-encrypted-files-bucket" 
+  
+  tags = {
+    Name        = "SecureCloudStorageBucket"
+    Environment = "Dev"
+  }
+}
 
 
 resource "aws_instance" "my_web_server" {
