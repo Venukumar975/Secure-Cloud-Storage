@@ -37,15 +37,22 @@ resource "aws_security_group" "web_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] 
+    cidr_blocks = ["38.183.101.34/32"] # Only allow SSH from your IP address (replace with your actual IP)
   }
+  ingress {
+  description = "Allow HTTPS (Secure Web Traffic)"
+  from_port   = 443
+  to_port     = 443
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}
 
   # Outbound rules (What the server can connect out to)
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1" # -1 means all protocols
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"] 
   }
 }
 
@@ -58,7 +65,7 @@ resource "aws_instance" "my_web_server" {
 
   # Attach the Security Group we just created above
   vpc_security_group_ids = [aws_security_group.web_sg.id]
-
+  key_name = "SCS-key-pair" # key pair for ssh access
   tags = {
     Name = "MyCustomWebUI"
   }
