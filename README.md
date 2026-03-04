@@ -1,7 +1,7 @@
 # Secure Cloud Storage (SCS) Project
 
 ## Overview
-The Secure Cloud Storage (SCS) project is designed to provide a secure and scalable cloud-based solution for file storage and web hosting. This repository contains the application code, infrastructure as code (IaC) using Terraform, and GitHub workflows for CI/CD.
+The Secure Cloud Storage (SCS) project is a privacy-first storage solution designed to ensure that sensitive data remains confidential even when stored in the public cloud. Unlike traditional storage, this system performs Client-Side Encryption, meaning your files are locked on your local machine before they ever reach the internet. AWS only ever stores and manages encrypted "ciphertext
 
 ---
 
@@ -88,4 +88,5 @@ Automated CI/CD workflows for managing the infrastructure:
 ---
 
 ## License
+
 This project is licensed under the terms of the [LICENSE](LICENSE) file.
