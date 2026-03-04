@@ -67,7 +67,7 @@ resource "aws_instance" "my_web_server" {
   vpc_security_group_ids = [aws_security_group.web_sg.id]
   key_name = "SCS-key-pair" # key pair for ssh access
   tags = {
-    Name = "MyCustomWebUI"
+    Name = "MySimpleWebServer"
   }
 }
 
