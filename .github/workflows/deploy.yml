@@ -8,6 +8,10 @@ on:
 jobs:
   apply:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: infrastructure/terraform
 # ... rest of your code
     steps:
       - uses: actions/checkout@v4
