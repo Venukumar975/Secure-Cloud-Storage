@@ -1,92 +1,62 @@
 # Secure Cloud Storage (SCS) Project
 
 ## Overview
-The Secure Cloud Storage (SCS) project is a privacy-first storage solution designed to ensure that sensitive data remains confidential even when stored in the public cloud. Unlike traditional storage, this system performs Client-Side Encryption, meaning your files are locked on your local machine before they ever reach the internet. AWS only ever stores and manages encrypted "ciphertext
+[cite_start]The Secure Cloud Storage (SCS) project is a privacy-first storage solution designed to ensure that sensitive data remains confidential even when stored in the public cloud[cite: 1, 9]. [cite_start]Unlike traditional storage, this system performs **Client-Side Encryption**, meaning your files are locked on your local machine before they ever reach the internet[cite: 7, 8]. [cite_start]AWS only ever stores and manages encrypted "ciphertext"[cite: 9].
+
+[cite_start]To enable searching over encrypted data without decrypting it on the server, this project implements **Symmetric Searchable Encryption (SSE)** using the **Hexie** and **Jianding** algorithms[cite: 96, 104].
+
+---
+
+## Core Algorithms
+
+### 1. Hexie: Dynamic Searchable Encryption
+[cite_start]Hexie is the base algorithm providing **Forward and Backward Privacy**[cite: 103, 261].
+* [cite_start]**Mechanism**: It implements secret sharing to conceal index entries, enabling dynamic updates and lightweight clients[cite: 105, 192].
+* [cite_start]**Update Logic**: For each keyword/document pair, the client generates a secret share and XORs it with the previous "last share" stored in the local `DI` (Inverted Index) or `DF` (Forward Index)[cite: 307, 342].
+* [cite_start]**Search**: The client generates a trapdoor consisting of a secret key and the last share[cite: 317, 342]. [cite_start]The server uses this to "unravel" the chain of XORed shares stored in the cloud until it reaches the stop signal $1^{\lambda}$[cite: 334, 407].
+
+### 2. Jianding: Verifiable Integrity
+[cite_start]Jianding is an extension of Hexie that adds a search result verification mechanism to protect against malicious or faulty cloud providers[cite: 106, 193].
+* [cite_start]**Mechanism**: It combines a **Chained MAC** (Message Authentication Code) structure with the secret sharing scheme[cite: 107, 194].
+* [cite_start]**Integrity**: Each encrypted entry contains the MAC of the previous entry in the chain[cite: 421, 424].
+* [cite_start]**Verification**: The client stores the MAC of the final entry locally[cite: 425]. [cite_start]During decryption, the client verifies the MACs of retrieved ciphertext from last to first to ensure the cloud has not returned empty, incomplete, or inaccurate results[cite: 431, 433].
 
 ---
 
 ## Repository Structure
 
-### 1. **Application Code** (`app/`)
-This folder contains the Python application code for the project. Key files include:
+### 1. Application Code (`app/`)
+* [cite_start]**`app.py`**: Flask UI for the local web application[cite: 25, 26].
+* [cite_start]**`aws_client.py`**: Handles `boto3` calls to interact with AWS services like S3[cite: 32, 35].
+* **`encryption.py`**: Core AES encryption and decryption utilities[cite: 27, 28].
+* [cite_start]**`hexie.py`**: Implementation of the Hexie index logic and secret sharing[cite: 29, 30].
+* [cite_start]**`jianding.py`**: Implementation of the Jianding verification and MAC chaining logic[cite: 31, 34].
+* **`templates/`**: HTML files for the web interface (`index.html`, `upload.html`, `search.html`)[cite: 36, 40].
 
-- **`app.py`**: The main entry point for the application. (Currently empty, awaiting implementation.)
-- **`aws_client.py`**: Handles interactions with AWS services such as S3.
-- **`encryption.py`**: Provides encryption utilities to ensure secure file storage.
-- **`hexie.py`**: (Purpose not specified, likely a utility module.)
-- **`jianding.py`**: (Purpose not specified, likely a utility module.)
-- **`test_download.py`**: Contains test cases for the file download functionality.
-- **`test_upload.py`**: Contains test cases for the file upload functionality.
-- **`static/`**: Holds static assets like CSS, JavaScript, and images.
-- **`templates/`**: Contains HTML templates for the web application.
-  - `index.html`: The homepage.
-  - `search.html`: The search page.
-  - `upload.html`: The file upload page.
+### 2. Infrastructure Code (`infrastructure/terraform/`)
+* [cite_start]**`main.tf`**: Defines AWS resources including the **S3 Bucket** (`scs-encrypted-files-bucket`) and **EC2 Instance**[cite: 18, 20].
+* [cite_start]**`variables.tf`**: Configurable variables for the infrastructure[cite: 21].
+* **`outputs.tf`**: Outputs the public URL of the deployed web server[cite: 23].
 
-### 2. **Infrastructure Code** (`infrastructure/terraform/`)
-This folder contains Terraform configuration files to define and manage the cloud infrastructure:
-
-- **`main.tf`**: Defines the AWS resources:
-  - **S3 Bucket**: `scs-encrypted-files-bucket` for secure file storage. 
-    - **Important**: `force_destroy = true` is set, which allows the bucket to be deleted even if it contains objects. Use with caution in production.
-  - **Security Group**: `web-server-sg` to allow HTTP, HTTPS, and SSH traffic.
-    - HTTP and HTTPS are open to the world (`0.0.0.0/0`).
-    - SSH is restricted to a specific IP address.
-  - **EC2 Instance**: A web server running on a `t3.micro` instance with an Ubuntu AMI.
-    - The public IP of the instance is output for easy access.
-- **`outputs.tf`**: Specifies the outputs of the Terraform configuration (e.g., public IP).
-- **`variables.tf`**: Defines input variables for the Terraform configuration.
-
-### 3. **GitHub Workflows** (`.github/workflows/`)
-Automated CI/CD workflows for managing the infrastructure:
-
-- **`deploy.yml`**: Deploys the infrastructure automatically on a push to the `main` branch.
-  - Steps:
-    1. Check out the repository.
-    2. Configure AWS credentials using GitHub secrets.
-    3. Initialize and apply the Terraform configuration.
-- **`destroy.yml`**: Provides a manual workflow to destroy the infrastructure.
-  - Steps:
-    1. Check out the repository.
-    2. Configure AWS credentials using GitHub secrets.
-    3. Initialize and destroy the Terraform configuration.
+### 3. GitHub Workflows (`.github/workflows/`)
+* [cite_start]**`deploy.yml`**: CI/CD pipeline to automatically deploy infrastructure on push to `main`[cite: 46, 47].
+* [cite_start]**`destroy.yml`**: Workflow to manually tear down AWS resources[cite: 48].
 
 ---
 
-## Key Points
-- **S3 Bucket**: The `force_destroy = true` setting allows deletion of the bucket even if it contains objects. This is useful for development but should be handled carefully in production.
-- **Security Group**: HTTP and HTTPS traffic are open to the world, while SSH access is restricted to a specific IP.
-- **GitHub Secrets**: AWS credentials are securely stored as GitHub secrets and used in workflows.
-- **Terraform State**: The Terraform state is stored in an S3 bucket (`amzn-terraform-s3-bucket`) for remote state management.
-
----
-
-## How to Use
+## Setup and Usage
 
 ### Prerequisites
-- AWS account with appropriate permissions.
-- Terraform installed locally.
-- Python environment set up (e.g., using the `Myenv` virtual environment).
+* **Python 3.x**: Installed locally[cite: 51].
+* [cite_start]**AWS CLI**: Configured via `aws configure` to provide local credentials[cite: 63, 77].
+* [cite_start]**Dependencies**: Install via `pip install -r requirements.txt` (includes `flask`, `boto3`, and `cryptography`)[cite: 55, 59].
 
-### Deployment
-1. Push changes to the `main` branch to trigger the `deploy.yml` workflow.
-2. Monitor the workflow in the GitHub Actions tab.
-3. Access the web server using the public IP output by Terraform.
-
-### Destruction
-1. Trigger the `destroy.yml` workflow manually from the GitHub Actions tab.
-2. Confirm the destruction of resources.
+### Verification
+1. **Hexie Test**: Use `test_upload.py` and `test_download.py` to confirm basic S3 connectivity.
+2. **Algorithm Test**: Run the `hexie.py` logic to ensure keywords can be searched after multiple updates. [cite_start]Enable `jianding.py` to verify that any modification of ciphertext on the server is detected[cite: 194, 430].
 
 ---
 
 ## Future Work
-- Implement the application logic in `app.py`.
-- Add more robust testing and monitoring.
-- Secure the S3 bucket with encryption and access policies.
-- Optimize the Terraform configuration for production use.
-
----
-
-## License
-
-This project is licensed under the terms of the [LICENSE](LICENSE) file.
+* [cite_start]**Dictionary Sharding**: Implement graph-based dictionary sharding to enhance search efficiency[cite: 108, 196].
+* **Compaction**: Implement index reconstruction to physically remove deleted entries and optimize storage[cite: 396, 397].
