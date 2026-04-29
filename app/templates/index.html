@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SCS | Secure Cloud Storage</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="/">HOME</a>
+        <a href="/upload">UPLOAD</a>
+        <a href="/search">SEARCH</a>
+    </nav>
+    <div class="container">
+        <h1>HEXIE VAULT</h1>
+        <p>Symmetric Searchable Encryption Interface</p>
+        <div style="margin-top: 40px;">
+            <button onclick="location.href='/upload'">Secure a New File</button>
+            <button onclick="location.href='/search'">Search the Cloud</button>
+        </div>
+    </div>
+</body>
+</html>
