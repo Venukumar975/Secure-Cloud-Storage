@@ -9,6 +9,8 @@ from PyPDF2 import PdfReader
 from encryption import encrypt_file, derive_keys
 from aws_client import upload_file
 from dotenv import load_dotenv
+import hmac
+
 
 load_dotenv()
 
@@ -49,7 +51,7 @@ def get_clean_keywords(abs_path):
             with open(abs_path, 'r') as f:
                 raw_words.extend(f.read().lower().split())
     except Exception as e:
-        print(f"⚠️ Content Scan Warning: {e}")
+        print(f" Content Scan Warning: {e}")
 
     # Refined stop words - 'txt' is a file extension, usually not a useful keyword
     stop_words = {'the', 'and', 'for', 'this', 'that', 'with', 'from', 'your', 'will', 'pdf', 'enc', 'txt'}
@@ -71,24 +73,24 @@ def get_clean_keywords(abs_path):
 
 def run_upload(abs_path):
     if not os.path.exists(abs_path):
-        print(f"❌ Error: {abs_path} not found.")
+        print(f"Error: {abs_path} not found.")
         return
 
     file_base = os.path.basename(abs_path)
-    print(f"\n🚀 Starting Hexie Upload: {file_base}")
+    print(f"\n Starting Hexie Upload: {file_base}")
     
     keywords = get_clean_keywords(abs_path)
     if not keywords:
-        print("⚠️ No valid keywords found. Upload aborted.")
+        print(" No valid keywords found. Upload aborted.")
         return
         
-    print(f"🔍 Extracted {len(keywords)} tokens: {keywords[:10]}...")
+    print(f" Extracted {len(keywords)} tokens: {keywords[:10]}...")
 
     # Local Encryption
     cloud_id = hashlib.sha256(str(uuid.uuid4()).encode()).hexdigest()
     s3_key = f"{cloud_id}.enc"
     
-    print(f"🔒 Encrypting locally...")
+    print(f" Encrypting locally...")
     with open(abs_path, "rb") as f:
         # Note: encrypt_file uses the original filename as context
         ciphertext = encrypt_file(f.read(), file_base)
@@ -99,17 +101,17 @@ def run_upload(abs_path):
         f.write(ciphertext)
 
     # S3 Upload
-    print(f"☁️ Uploading to S3...")
+    print(f" Uploading to S3...")
     if not upload_file(temp_enc_path, s3_key):
         return
 
     # Hexie Index Update
     state = load_json_state(STATE_FILE)
-    print(f"🔗 Linking {len(keywords)} keywords to EC2...")
+    print(f" Linking {len(keywords)} keywords to EC2...")
     
     success_count = 0
     for kw in keywords:
-        kt1, _ = derive_keys(kw)
+        kt1, k2, kv = derive_keys(kw) # Get the verification key
         
         # Algorithm 2: Chain generation[cite: 1]
         pi_prev_hex = state.get(kw, (b'1' * 16).hex())
@@ -121,20 +123,25 @@ def run_upload(abs_path):
         c_w = hashlib.sha256(new_pi).hexdigest()
         mask = hashlib.sha256(kt1 + new_pi).digest()[:16]
         c_a = bytes(a ^ b for a, b in zip(r, mask)).hex()
+        
+        # Algorithm 3: Generation of Verification Tag (Jianding)
+        tag_content = c_w.encode() + s3_key.encode()
+        v = hmac.new(kv, tag_content, hashlib.sha256).hexdigest()
 
         try:
             resp = requests.post(f"{EC2_URL}/update", json={
                 "c_w": c_w, 
                 "c_a": c_a, 
                 "c_id": s3_key, 
-                "original": file_base
+                "original": file_base,
+                "v":v                   # Send the Jianding seal
             }, timeout=5)
             
             if resp.status_code == 200:
                 state[kw] = new_pi.hex()
                 success_count += 1
         except Exception as e:
-            print(f"❌ Failed to reach EC2 for keyword '{kw}': {e}")
+            print(f" Failed to reach EC2 for keyword '{kw}': {e}")
 
     # Save finalized local state
     with open(STATE_FILE, "w") as f:
@@ -143,7 +150,7 @@ def run_upload(abs_path):
     if os.path.exists(temp_enc_path):
         os.remove(temp_enc_path)
         
-    print(f"✅ Success! {success_count}/{len(keywords)} tokens linked in XOR chain.")
+    print(f" Success! {success_count}/{len(keywords)} tokens linked in XOR chain.")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

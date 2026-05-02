@@ -77,7 +77,7 @@ resource "aws_security_group" "web_sg" {
 
 # --- 4. UBUNTU EC2 ---
 resource "aws_instance" "ubuntu_server" {
-  ami           = "ami-0d865291affebdbf7" 
+  ami           = "ami-0b34af8cbb2fd9232" 
   instance_type = "t3.micro"
   key_name      = aws_key_pair.generated_key.key_name
   vpc_security_group_ids = [aws_security_group.web_sg.id]
