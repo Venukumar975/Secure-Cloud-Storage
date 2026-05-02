@@ -49,10 +49,15 @@ def perform_search(keyword):
         }, timeout=10)
         
         if response.status_code == 200:
-            # Server returns a list of DICTS: [{'s3_key': '...', 'original': '...'}, ...][cite: 1]
-            results = response.json().get('results', [])
-            valid_results = []
+            # Server returns a list of DICTS: [{'s3_key': '...', 'original': '...'}, ...]
+            data = response.json()
+            results = data.get('results', [])
+            final_pi = data.get('final_pi')
+            stop_signal = (b'1' * 16).hex()   # 1^lambda from paper
             print(f"  Verifying integrity of {len(results)} file(s) in the XOR chain...")
+            # --- 1. INTEGRITY CHECK ---
+            
+            valid_results = []
             for item in results:
                 # Re-calculate tag using kv and address
                 tag_content = item['c_w'].encode() + item['s3_key'].encode()
@@ -64,7 +69,14 @@ def perform_search(keyword):
                 else:
                     print(f" ## SECURITY ALERT: MAC mismatch for {item['original']}!")
                     print(f" ## Expected: {local_v[:10]}... Got: {item['v'][:10]}...")
-            
+                    
+            # --- 2. COMPLETENESS CHECK (The Jianding Core) ---
+            if final_pi == stop_signal:
+                print(" *** Jianding Proof: Chain completeness verified (reached stop signal).")
+            else:
+                print("!!! COMPLETENESS ALERT: Server omitted files or cut the chain early!")
+                # In a high-security setup, you would reject all results here
+                return []
             return valid_results
         return []
     except Exception as e:
@@ -107,7 +119,7 @@ def run_search_interface(keyword):
     if not matches:
         print(f" No matching records found for: '{keyword}'")
         return
-
+ 
     print(f"\n Found {len(matches)} matching file(s) on EC2:")
     for i, item in enumerate(matches):
         # Fix: Access 'original' filename from the EC2 result dictionary[cite: 1]
