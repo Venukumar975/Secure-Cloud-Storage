@@ -40,6 +40,12 @@
    => chmode 400 access.pem
    => ssh -i access.pem ubuntu@<INSTANCE_IP>
 
+7. Now after connecting to ur EC2 ;
+   => cd hexie_server
+   => source venv/bin/activate
+   => python3 server.py
+   => check whether the EC2 SERVER is Online or not
+
 ========================================================================================
 
 ## Create an .env in app/ and 
