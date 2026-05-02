@@ -77,7 +77,7 @@ resource "aws_security_group" "web_sg" {
 
 # --- 4. UBUNTU EC2 ---
 resource "aws_instance" "ubuntu_server" {
-  ami           = "ami-091138d0f0d41ff90" 
+  ami           = "ami-0d865291affebdbf7" 
   instance_type = "t3.micro"
   key_name      = aws_key_pair.generated_key.key_name
   vpc_security_group_ids = [aws_security_group.web_sg.id]
@@ -93,4 +93,8 @@ output "instance_ip" {
 
 output "ssh_command" {
   value = "ssh -i access.pem ubuntu@${aws_instance.ubuntu_server.public_ip}"
+}
+
+output "Ec2_server" {
+  value = "http://${aws_instance.ubuntu_server.public_ip}:5000"
 }

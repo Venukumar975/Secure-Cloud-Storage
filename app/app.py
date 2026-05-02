@@ -2,14 +2,29 @@ import os
 from flask import Flask, render_template, request, jsonify
 from scs_search import perform_search, decrypt_and_save
 from scs_client import run_upload
+from aws_client import get_s3_client
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
+
 UPLOAD_FOLDER = 'temp_uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "fallback")
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    s3 = get_s3_client()
+    try:
+        # List objects in the bucket
+        response = s3.list_objects_v2(Bucket=BUCKET_NAME)
+        # 'KeyCount' is the number of objects; if bucket is empty, it might be 0
+        file_count = response.get('KeyCount', 0)
+    except Exception:
+        file_count = 0
+        
+    return render_template('index.html', count=file_count)
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_page():
@@ -44,7 +59,7 @@ def download_file_route():
     try:
         # 1. Decrypt the file logic (this should return bytes)
         # Assuming decrypt_and_save returns the local path as before:
-        path = decrypt_and_save(data['selected'], data['keyword'])
+        path = decrypt_and_save(data['selected'])
         
         if path and os.path.exists(path):
             # 2. Send the file back to the browser
