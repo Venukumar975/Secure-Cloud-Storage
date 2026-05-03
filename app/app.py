@@ -13,6 +13,33 @@ UPLOAD_FOLDER = 'temp_uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "fallback")
 
+
+import queue
+import sys
+
+# Add a global queue to hold log messages
+log_queue = queue.Queue()
+
+# A custom "stream" that puts data into our queue
+class LogStream:
+    def write(self, data):
+        if data.strip():
+            log_queue.put(data)
+    def flush(self):
+        pass
+
+# Redirect standard output so 'print' goes to our queue
+sys.stdout = LogStream()
+
+@app.route('/stream-logs')
+def stream_logs():
+    def generate():
+        while True:
+            # Get log from queue and send as SSE
+            msg = log_queue.get()
+            yield f"data: {msg}\n\n"
+    return app.response_class(generate(), mimetype='text/event-stream')
+
 @app.route('/')
 def index():
     s3 = get_s3_client()
@@ -72,4 +99,4 @@ def download_file_route():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    app.run(port=5030, debug=True)

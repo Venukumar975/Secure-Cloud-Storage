@@ -15,10 +15,10 @@ def upload_file(local_path, s3_key):
     s3 = get_s3_client()
     try:
         s3.upload_file(local_path, BUCKET_NAME, s3_key) 
-        print(f"✅ {local_path} uploaded to S3 as {s3_key}")
+        #print(f"✅ {local_path} uploaded to S3 as {s3_key}")
         return True
     except Exception as e:
-        print(f"❌ Upload failed: {e}")
+        print(f"❌Upload failed: {e}")
         return False
 
 def download_file(s3_key, local_path):

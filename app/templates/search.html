@@ -23,19 +23,28 @@
 
     <main class="page-content">
         <section class="search-panel">
-            <div class="search-card">
-                <h2>Query Vault</h2>
-                <p>Enter a keyword or file identifier to retrieve matching encrypted records.</p>
-
-                <div class="search-bar">
-                    <input type="text" id="keyword" placeholder="Search by keyword or ID...">
-                    <button class="primary-btn" onclick="performSearch()">Query Vault</button>
+            <div class="complete-search-div">
+                <div class="search-card">
+                    <h2>Query Vault</h2>
+                    <p>Enter a keyword to retrieve matching encrypted records.</p>
+                    <div class="search-bar">
+                        <input type="text" id="keyword" placeholder="Search by keyword...">
+                        <button class="primary-btn" onclick="performSearch()">Query Vault</button>
+                    </div>
+                    <p id="status-msg" class="status-text"></p>
                 </div>
-
-                <p id="status-msg" class="status-text"></p>
+                <div id="results" class="results-grid"></div>
             </div>
 
-            <div id="results" class="results-grid"></div>
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <span>LIVE CONSOLE</span>
+                    <span>● ● ●</span>
+                </div>
+                <div id="terminalBody" class="terminal-body">
+                    <div class="log-entry">Waiting for process...</div>
+                </div>
+            </div>
         </section>
     </main>
 
@@ -49,11 +58,7 @@
             const resDiv = document.getElementById('results');
             const statusMsg = document.getElementById('status-msg');
 
-            if (!activeSearchTerm) {
-                statusMsg.innerText = 'Please enter a search term.';
-                return;
-            }
-
+            if (!activeSearchTerm) return;
             statusMsg.innerText = 'Searching encrypted vault...';
             resDiv.innerHTML = '';
 
@@ -67,8 +72,7 @@
                 currentResults = data.results || [];
 
                 if (currentResults.length === 0) {
-                    statusMsg.innerText = 'No matches found for this query.';
-                    resDiv.innerHTML = '<p class="empty-state">No encrypted records match this criteria.</p>';
+                    statusMsg.innerText = 'No matches found.';
                     return;
                 }
 
@@ -77,47 +81,41 @@
                     <div class="file-card">
                         <div>
                             <h3>${file.original}</h3>
-                            <p>Encrypted key: ${file.s3_key.substring(0, 24)}...</p>
+                            <p>S3 ID: ${file.s3_key.substring(0, 15)}...</p>
                         </div>
-                        <button onclick="downloadFile(${index})">Retrieve</button>
+                        <button class="primary-btn" onclick="downloadFile(${index})" style="padding: 8px 16px; min-width: auto;">Retrieve</button>
                     </div>
                 `).join('');
-            } catch (error) {
-                statusMsg.innerText = 'Search failed. Check backend availability.';
-            }
+            } catch (error) { statusMsg.innerText = 'Search failed.'; }
         }
+
+        const terminalBody = document.getElementById('terminalBody');
+        const eventSource = new EventSource('/stream-logs');
+        eventSource.onmessage = function(event) {
+            const newLog = document.createElement('div');
+            newLog.className = 'log-entry';
+            newLog.innerText = `> ${event.data}`;
+            terminalBody.appendChild(newLog);
+            terminalBody.scrollTop = terminalBody.scrollHeight;
+        };
 
         async function downloadFile(index) {
             const selected = currentResults[index];
-            const statusMsg = document.getElementById('status-msg');
-            statusMsg.innerText = `Requesting file: ${selected.original}...`;
-
             try {
                 const response = await fetch('/download', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({selected, keyword: activeSearchTerm})
                 });
-
-                if (!response.ok) throw new Error('Download failed');
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = selected.original;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-                statusMsg.innerText = `Downloaded: ${selected.original}`;
-            } catch (err) {
-                statusMsg.innerText = 'Unable to retrieve file. Please retry.';
-            }
+                a.href = url; a.download = selected.original;
+                document.body.appendChild(a); a.click(); a.remove();
+            } catch (err) { alert('Download failed'); }
         }
 
-        document.getElementById('keyword').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') performSearch();
-        });
+        document.getElementById('keyword').addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(); });
     </script>
 </body>
 </html>

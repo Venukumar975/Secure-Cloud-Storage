@@ -141,7 +141,7 @@ def run_upload(abs_path):
                 state[kw] = new_pi.hex()
                 success_count += 1
         except Exception as e:
-            print(f" Failed to reach EC2 for keyword '{kw}': {e}")
+            print(f" Failed to reach EC2 for keyword '{kw}':Check Internet Connectivity and Ec2 IP")
 
     # Save finalized local state
     with open(STATE_FILE, "w") as f:
