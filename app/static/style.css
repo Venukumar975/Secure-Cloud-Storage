@@ -67,7 +67,38 @@ body {
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.22);
 }
 
-.hero-card { display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; align-items: center; }
+.hero-card {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 32px;
+    align-items: start;
+}
+
+.hero-status {
+    grid-column: 1 / 2;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.hero-status .status-card {
+    width: 100%;
+    max-width: 460px;
+}
+
+.hero-copy {
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+}
+
+.hero-graphic {
+    grid-column: 2 / 3;
+    grid-row: 1 / span 2;
+    display: grid;
+    gap: 18px;
+    align-content: start;
+}
 
 .hero-copy {
     display: flex;
