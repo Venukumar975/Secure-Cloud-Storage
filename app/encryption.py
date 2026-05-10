@@ -9,14 +9,15 @@ def derive_keys(keyword, master_key=MASTER_KEY):
     """Derives kt1 (search), k2 (file enc), and kv (verification)"""
     keyword_bytes = keyword.lower().encode()
     # Algorithm 1: Key Generation
-    kt1 = hmac.new(master_key, keyword_bytes + b"search", hashlib.sha256).digest()[:16]
-    k2 = hmac.new(master_key, keyword_bytes + b"file", hashlib.sha256).digest()[:16]
-    kv = hmac.new(master_key, keyword_bytes + b"verify", hashlib.sha256).digest()[:16]
+    kt1 = hmac.new(master_key, keyword_bytes + b"search", hashlib.sha256).digest()[:16] # search key
+    k2 = hmac.new(master_key, keyword_bytes + b"file", hashlib.sha256).digest()[:16]   # To encrypt the content
+    kv = hmac.new(master_key, keyword_bytes + b"verify", hashlib.sha256).digest()[:16]   # For Jianding Verfication
+    
     return kt1, k2, kv
 
 def encrypt_file(data, keyword):
     """Algorithm 2: Encrypts data using k2 derived from the keyword."""
-    _, k2, _ = derive_keys(keyword) # Updated to skip kv
+    _, k2, _ = derive_keys(keyword) # Updated to skip kv and kt1
     aesgcm = AESGCM(k2)
     nonce = os.urandom(12)
     ciphertext = aesgcm.encrypt(nonce, b'\x00' + data, None)

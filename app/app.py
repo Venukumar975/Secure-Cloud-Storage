@@ -35,11 +35,11 @@ sys.stdout = LogStream()
 def stream_logs():
     def generate():
         while True:
-            # Get log from queue and send as SSE
-            msg = log_queue.get()
+            # This 'get' will wait until a log appears
+            msg = log_queue.get() 
+            # Adding an extra \n can help push the buffer in some browsers
             yield f"data: {msg}\n\n"
     return app.response_class(generate(), mimetype='text/event-stream')
-
 @app.route('/')
 def index():
     s3 = get_s3_client()

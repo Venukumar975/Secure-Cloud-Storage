@@ -51,8 +51,9 @@ def perform_search(keyword):
 
         data = response.json()
         results = data.get('results', [])
+        chain_status = data.get('chain_status',"unknown")
         final_pi = data.get('final_pi')
-        stop_signal = (b'1' * 16).hex()
+        stop_signal = (b'1' * 16).hex() # Initial PI value
         
         # Tracking categories for the report
         total_chain_length = len(results)
@@ -61,8 +62,14 @@ def perform_search(keyword):
         content_mismatch = []
         verified_files = []
 
-        print(f" Verifying {total_chain_length} chain links...")
-
+        if chain_status == "broken":
+            print("WARNING: INCOMPLETE SEARCH CHAIN DETECTED")
+            print(f"Only {len(results)} links recovered before the chain was cut.")
+        elif chain_status == "complete":
+            print(f" [+] Chain integrity verified: All {len(results)} links recovered.")
+            
+        print(f" Verifying {total_chain_length} chain links related to keyword '{keyword}' ...")
+        
         for item in results:
             # Layer 1: Index Integrity (Jianding MAC check)
             tag_content = item['c_w'].encode() + item['s3_key'].encode() + item['f_hash'].encode()
@@ -88,29 +95,43 @@ def perform_search(keyword):
                     print(f" [!] CONTENT MISMATCH: {item['original']}")
                     
             except botocore.exceptions.ClientError as e:
-                if e.response['Error']['Code'] == "404":
+                error_code = e.response['Error']['Code']
+                # S3 returns "NoSuchKey" when a file is deleted
+                if error_code in ["404", "NoSuchKey"]:
                     missing_s3.append(item['original'])
                     print(f" [!] REMOVED FROM S3: {item['original']}")
+                else:
+                    print(f" [!] S3 API ERROR ({error_code}): {item['original']}")
+                    missing_s3.append(item['original']) # Treat as missing/inaccessible
+            except Exception as e:
+                print(f" [!] UNEXPECTED ERROR: {e}")
+                missing_s3.append(item['original'])
 
         # --- COMPLETE JIANDING VERIFICATION REPORT ---
-        print("\n" + "="*40)
-        print(" JIANDING SUMMARY")
-        print("="*40)
-        print(f" Total Chain Length (EC2): {total_chain_length}")
-        print(f" Successfully Verified   : {len(verified_files)}")
-        print(f" Index (MAC) Failures    : {len(mac_failed)}")
-        print(f" Content (Hash) Failures : {len(content_mismatch)}")
-        print(f" Missing (S3) Files      : {len(missing_s3)}")
+        print("\n" + "="*40,flush=True)
+        print(" JIANDING SUMMARY",flush=True)
+        print("="*40,flush=True)
+        print(f" Total Chain Length (EC2): {total_chain_length}",flush=True)
+        print(f" Successfully Verified   : {len(verified_files)}",flush=True)
+        print(f" Index (MAC) Failures    : {len(mac_failed)}",flush=True)
+        print(f" Content (Hash) Failures : {len(content_mismatch)}",flush=True)
+        print(f" Missing (S3) Files      : {len(missing_s3)}",flush=True)
+        print(f" Chain Status            : {chain_status.upper()}",flush=True)
         
-        if mac_failed: print(f" -> Tampered Index: {', '.join(mac_failed)}")
-        if content_mismatch: print(f" -> Modified Storage: {', '.join(content_mismatch)}")
-        if missing_s3: print(f" -> Deleted Storage: {', '.join(missing_s3)}")
+        if mac_failed:
+            print(f" -> Tampered Index: {', '.join(mac_failed)}")
+            
+        if content_mismatch:
+            print(f" -> Modified Storage: {', '.join(content_mismatch)}")
+            
+        if missing_s3:
+            print(f" -> Deleted Storage: {', '.join(missing_s3)}")
         
         if final_pi == stop_signal:
             print("\n [***] Completeness: Verified (Stop signal reached).")
         else:
             print("\n [!!!] Completeness: FAILED (Chain was cut early).")
-            return []
+            
 
         return verified_files
 
