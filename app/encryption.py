@@ -3,7 +3,7 @@ import hashlib
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 import hmac
 # Keep this secret locally
-MASTER_KEY = b'fixed_32_byte_key_for_testing_123' 
+MASTER_KEY = b'fixed_32_byte_key_for_testing_12' 
 
 def derive_keys(keyword, master_key=MASTER_KEY):
     """Derives kt1 (search), k2 (file enc), and kv (verification)"""
